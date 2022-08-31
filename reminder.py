@@ -27,6 +27,7 @@ class Reminder:
 
     @tasks.loop(seconds=2)
     async def task(self):
+        #print(self.date - datetime.now())
         if datetime.now() >= self.date:
             print('Reminder done')
             await self.channel.send(f'{self.ping.mention}\n{self.message}')

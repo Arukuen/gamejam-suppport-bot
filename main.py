@@ -35,7 +35,6 @@ class MyClient(discord.Client):
 def fetch_closest_and_start_reminder():
     reminder = database.db_get_valid_closest_reminder()
     if reminder is None:
-        print('None')
         return
     reminder_guild: discord.Guild = client.get_guild(reminder.guildId)
     reminder_channel = reminder_guild.get_channel(reminder.channelId)
@@ -95,10 +94,14 @@ async def add_reminders(
     
     date = datetime(year, month, day, hour, minute)
     database.db_add_reminder(title, date, message, interaction.guild.id, channel.id, ping.id)
-    # If the new date is closer than the currently running or the current is already done, run the new instead
-    if client.reminder.date is not None:
-        if date < client.reminder.date or client.reminder.date < datetime.now():
-            client.reminder.set_and_start(title, date, message, channel, ping, fetch_closest_and_start_reminder)
+    # If there is no previous date or 
+    # If the new date is closer than the currently running or 
+    # If the current is already done,
+    # Run the new
+    if client.reminder.date == None or date < client.reminder.date or client.reminder.date < datetime.now():
+        client.reminder.set_and_start(title, date, message, channel, ping, fetch_closest_and_start_reminder)
+    
+    await interaction.response.send_message(f'Event {title} added')
     await interaction.response.send_message(f'Event {title} added')
 
 
@@ -137,10 +140,13 @@ async def add_reminders(
     date = datetime.now() + timedelta(days=days_from_today)
     date = date.replace(hour=hour, minute=minute)
     database.db_add_reminder(title, date, message, interaction.guild.id, channel.id, ping.id)
-    # If the new date is closer than the currently running or the current is already done, run the new instead
-    if client.reminder.date is not None:
-        if date < client.reminder.date or client.reminder.date < datetime.now():
-            client.reminder.set_and_start(title, date, message, channel, ping, fetch_closest_and_start_reminder)
+    # If there is no previous date or 
+    # If the new date is closer than the currently running or 
+    # If the current is already done,
+    # Run the new
+    if client.reminder.date == None or date < client.reminder.date or client.reminder.date < datetime.now():
+        client.reminder.set_and_start(title, date, message, channel, ping, fetch_closest_and_start_reminder)
+    
     await interaction.response.send_message(f'Event {title} added')
 
 
