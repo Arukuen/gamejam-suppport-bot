@@ -2,6 +2,12 @@ import discord
 from reminder import Reminder
 from datetime import MAXYEAR, MINYEAR, datetime, timedelta
 import database
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+# Discord token goes here
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 
 class MyClient(discord.Client):
@@ -153,5 +159,4 @@ async def list_reminders(interaction: discord.Interaction):
     await interaction.response.send_message(reminders_str)
 
 
-TOKEN = 'OTYxNTEwOTY5MTc4MjI2NzM5.Yk6C3w.5e11Q-Zb-CJhN1qPTn-m--KCnZw'
 client.run(TOKEN)
