@@ -35,9 +35,17 @@ def db_create_tables():
 def db_add_reminder(title: str, date: datetime, message: str, guildId:int, channelId: int, pingId: int):
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     c = conn.cursor()
+    c.execute(f'SELECT Title FROM Reminder')
+    # Ensuring that title is unique
+    reminder_titles = c.fetchall()
+    for reminder_title in reminder_titles:
+        if reminder_title[0] == title:
+            return False
     c.execute("INSERT INTO Reminder VALUES (NULL,?,?,?,?,?,?)", (title, date, message, guildId, channelId, pingId))
     conn.commit()
     conn.close()
+    return True
+
 
 def db_get_reminders() -> list:
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
@@ -50,6 +58,7 @@ def db_get_reminders() -> list:
     conn.commit()
     conn.close()
     return reminders
+
 
 def db_get_valid_closest_reminder() -> ReminderPackage:
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
@@ -68,6 +77,18 @@ def db_get_valid_closest_reminder() -> ReminderPackage:
     return ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4], reminder[5])
 
 
+def db_delete_by_title(title: str):
+    conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    c = conn.cursor()
+    c.execute(f'SELECT Title FROM Reminder WHERE Title = "{title}"')
+    reminder = c.fetchone()
+    if reminder == None:
+        return False
+    c.execute(f'DELETE FROM Reminder WHERE Title = "{title}"')
+    conn.commit()
+    conn.close()
+    return True
+
 # For test only, will delete
 def db_is_table_exist():
     conn = sqlite3.connect("data.db")
@@ -81,7 +102,8 @@ def db_is_table_exist():
 
 
 # For test only, will delete
-def db_reset():
-    conn = sqlite3.connect("data.db")
-    c = conn.cursor()
-    c.execute("DROP TABLE Reminder")
+# def db_reset():
+#     conn = sqlite3.connect("data.db")
+#     c = conn.cursor()
+#     c.execute("DROP TABLE Reminder")
+
