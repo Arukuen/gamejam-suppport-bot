@@ -63,7 +63,7 @@ tree = discord.app_commands.CommandTree(client)
 
 
 #### Commands ####
-@tree.command(name = 'add', description = 'Add a reminder', guild = discord.Object(id=961511823977357372))
+@tree.command(name = 'add', description = 'Add a reminder')
 @discord.app_commands.describe(
     title = 'Title of the event (should be unique)',
     day = 'What day to remind (1-31)',
@@ -113,7 +113,7 @@ async def add_reminders(
 
 
 
-@tree.command(name = 'add_from_today', description = 'Add a reminder specifying how many days from today.', guild = discord.Object(id=961511823977357372))
+@tree.command(name = 'add_from_today', description = 'Add a reminder specifying how many days from today.')
 @discord.app_commands.describe(
     title = 'Title of the event (should be unique)',
     days_from_today = 'Days from today to execute the reminder',
