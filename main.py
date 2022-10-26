@@ -1,17 +1,3 @@
-#### ISSUES ####
-# Event deletion
-#   - If done push to done events database
-#       - Help also less time finding closest
-#   - Might delete the running, need to check
-#   
-# Max 2000 words for listing
-# Delete only deletes from the database, if currently running, then not deleted
-
-#### Changelog ####
-# Remove the required ping input since you can ping more conveniently in the message input
-# Added list and list_all
-# Restricted the User that can use the bot with a hardcoded Role
-
 import discord
 from reminder import Reminder
 from datetime import MAXYEAR, MINYEAR, datetime, timedelta
@@ -23,6 +9,7 @@ load_dotenv()
 # Discord token goes here
 TOKEN = os.getenv('DISCORD_TOKEN')
 PERMITTED_ROLE_ID = int(os.getenv('PERMITTED_ROLE_ID'))
+PERMITTED_ROLE_ID = 1013338758705328170
 
 
 class MyClient(discord.Client):
@@ -47,14 +34,18 @@ class MyClient(discord.Client):
 
 
 # The callback
-# Do not use callback, instead embed to the reminder
+# Do not use callback directly, instead embed to the reminder
 def fetch_closest_and_start_reminder():
     reminder = database.db_get_valid_closest_reminder()
     if reminder is None:
         return
-    reminder_guild: discord.Guild = client.get_guild(reminder.guildId)
-    reminder_channel = reminder_guild.get_channel(reminder.channelId)
-    client.reminder.set_and_start(reminder.title, reminder.date, reminder.message, reminder_channel, fetch_closest_and_start_reminder)
+    guild: discord.Guild = client.get_guild(reminder.guildId)
+    channel = guild.get_channel(reminder.channelId)
+    image = None
+    if reminder.imageURL != None:
+        image = discord.Embed()
+        image.set_image(url=reminder.imageURL)
+    client.reminder.set_and_start(reminder.title, reminder.date, reminder.message, channel, image, fetch_closest_and_start_reminder)
 
 
 
@@ -87,6 +78,7 @@ async def add_reminder(
     minute:int,
     message:str,
     channel: discord.TextChannel,
+    image_url: str = None
 ):
     # Role Validation
     valid_role = interaction.guild.get_role(PERMITTED_ROLE_ID)
@@ -112,10 +104,17 @@ async def add_reminder(
         return
     
     date = datetime(year, month, day, hour, minute)
-    database.db_add_reminder(title, date, message, interaction.guild.id, channel.id)
-    client.reminder.set_and_start(title, date, message, channel, fetch_closest_and_start_reminder)
     
-    await interaction.response.send_message(f'{title} added')
+    db_resp = database.db_add_reminder(title, date, message, interaction.guild.id, channel.id, image_url)
+    if db_resp:
+        image = None
+        if image_url != None:
+            image = discord.Embed()
+            image.set_image(url=image_url)
+        client.reminder.set_and_start(title, date, message, channel, image, fetch_closest_and_start_reminder)
+        await interaction.response.send_message(f'{title} added')
+    else:
+        await interaction.response.send_message(f'Title "{title}" is duplicated. Choose a unique title.')
 
 
 
@@ -127,15 +126,17 @@ async def add_reminder(
     minute = 'What minute to remind (0-59)',
     message = 'Message content',
     channel = 'Channel to send the message',
+    image_url = 'URL of image to send along with the message'
 )
 async def add_reminder_from_today(
     interaction: discord.Interaction,
     title: str,
     days_from_today: int,
     hour: int,
-    minute:int,
-    message:str,
+    minute: int,
+    message: str,
     channel: discord.TextChannel,
+    image_url: str = None
 ):
     # Role Validation
     valid_role = interaction.guild.get_role(PERMITTED_ROLE_ID)
@@ -157,9 +158,13 @@ async def add_reminder_from_today(
     date = datetime.now() + timedelta(days=days_from_today)
     date = date.replace(hour=hour, minute=minute)
 
-    db_resp = database.db_add_reminder(title, date, message, interaction.guild.id, channel.id)
+    db_resp = database.db_add_reminder(title, date, message, interaction.guild.id, channel.id, image_url)
     if db_resp:
-        client.reminder.set_and_start(title, date, message, channel, fetch_closest_and_start_reminder)
+        image = None
+        if image_url != None:
+            image = discord.Embed()
+            image.set_image(url=image_url)
+        client.reminder.set_and_start(title, date, message, channel, image, fetch_closest_and_start_reminder)
         await interaction.response.send_message(f'{title} added')
     else:
         await interaction.response.send_message(f'Title "{title}" is duplicated. Choose a unique title.')
@@ -189,7 +194,8 @@ async def delete_reminder(
     # If the reminder being deleted is not the currently running
     if title != client.reminder.title:
         return
-    fetch_closest_and_start_reminder()
+    client.reminder.force_reset()
+
 
     
 
@@ -203,7 +209,7 @@ async def list_reminders(interaction: discord.Interaction):
 
     reminders = database.db_get_reminders(is_valid=True)
     if reminders == []:
-        await interaction.response.send_message('No reminders exist')
+        await interaction.response.send_message('No reminders currently running')
         return
     reminders = list(map(lambda reminder: 
         f'Event "{reminder.title}" at {reminder.date.strftime("%d %b %Y %H:%M")} with message "{reminder.message}"',

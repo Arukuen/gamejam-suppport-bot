@@ -3,12 +3,13 @@ from datetime import datetime
 
 
 class ReminderPackage:
-    def __init__(self, title: str, date: datetime, message: str, guildId:int, channelId: int) -> None:
+    def __init__(self, title: str, date: datetime, message: str, guildId:int, channelId: int, imageURL: str) -> None:
         self.title = title
         self.date = date
         self.message = message
         self.guildId = guildId
         self.channelId = channelId
+        self.imageURL = imageURL
 
 
 def db_create_tables():
@@ -22,7 +23,8 @@ def db_create_tables():
         Date        TIMESTAMP   NOT NULL,
         Message     TEXT        NOT NULL,
         GuildId     INTEGER     NOT NULL,
-        ChannelId   INTEGER     NOT NULL
+        ChannelId   INTEGER     NOT NULL,
+        ImageURL    TEXT
     )
     """
     )
@@ -30,7 +32,7 @@ def db_create_tables():
     conn.close()
 
 
-def db_add_reminder(title: str, date: datetime, message: str, guildId:int, channelId: int):
+def db_add_reminder(title: str, date: datetime, message: str, guildId:int, channelId: int, imageURL: str = None):
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     c = conn.cursor()
     c.execute(f'SELECT Title FROM Reminder')
@@ -39,7 +41,7 @@ def db_add_reminder(title: str, date: datetime, message: str, guildId:int, chann
     for reminder_title in reminder_titles:
         if reminder_title[0] == title:
             return False
-    c.execute("INSERT INTO Reminder VALUES (NULL,?,?,?,?,?)", (title, date, message, guildId, channelId))
+    c.execute("INSERT INTO Reminder VALUES (NULL,?,?,?,?,?,?)", (title, date, message, guildId, channelId, imageURL))
     conn.commit()
     conn.close()
     return True
@@ -49,15 +51,15 @@ def db_add_reminder(title: str, date: datetime, message: str, guildId:int, chann
 def db_get_reminders(is_valid = False) -> list:
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     c = conn.cursor()
-    c.execute(f'SELECT Title, Date, Message, GuildId, ChannelId FROM Reminder')
+    c.execute(f'SELECT Title, Date, Message, GuildId, ChannelId, ImageURL FROM Reminder')
     reminders = c.fetchall()
     if reminders == []:
         return []
     if not is_valid:
-        reminders = list(map(lambda reminder: ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4]), reminders))
+        reminders = list(map(lambda reminder: ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4], reminder[5]), reminders))
     else:
         current_date = datetime.now()
-        reminders = list(filter(lambda reminder: reminder.date > current_date, map(lambda reminder: ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4]), reminders)))
+        reminders = list(filter(lambda reminder: reminder.date > current_date, map(lambda reminder: ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4], reminder[5]), reminders)))
     conn.commit()
     conn.close()
     return reminders
@@ -67,7 +69,7 @@ def db_get_valid_closest_reminder() -> ReminderPackage:
     conn = sqlite3.connect("data.db", detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     c = conn.cursor()
     current_date = datetime.now()
-    c.execute(f'SELECT Title, Date, Message, GuildId, ChannelId FROM Reminder')
+    c.execute(f'SELECT Title, Date, Message, GuildId, ChannelId, ImageURL FROM Reminder')
     reminders = c.fetchall()
     if reminders == []: return None
     # Get all reminders past the current date (valid)
@@ -77,7 +79,7 @@ def db_get_valid_closest_reminder() -> ReminderPackage:
     reminder = min(valid_reminders, key=lambda reminder: reminder[1])
     conn.commit()
     conn.close()
-    return ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4])
+    return ReminderPackage(reminder[0], reminder[1], reminder[2], reminder[3], reminder[4], reminder[5])
 
 
 def db_delete_by_title(title: str):
