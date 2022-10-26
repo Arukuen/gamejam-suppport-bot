@@ -9,7 +9,6 @@ load_dotenv()
 # Discord token goes here
 TOKEN = os.getenv('DISCORD_TOKEN')
 PERMITTED_ROLE_ID = int(os.getenv('PERMITTED_ROLE_ID'))
-PERMITTED_ROLE_ID = 1013338758705328170
 
 
 class MyClient(discord.Client):
